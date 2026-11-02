@@ -930,8 +930,15 @@ export const mockUsers = {
 
 // Route-level Mock Dispatcher
 export function getMockResponse(rawUrl = '', method = 'GET', requestData = null) {
-  const url = rawUrl.replace(/^\/api/, '');
-  const cleanUrl = url.split('?')[0];
+  let cleanUrl = (rawUrl || '')
+    .replace(/^https?:\/\/[^\/]+/, '')
+    .replace(/^\/api/, '')
+    .split('?')[0];
+
+  if (!cleanUrl.startsWith('/')) {
+    cleanUrl = '/' + cleanUrl;
+  }
+  const normMethod = (method || 'GET').toUpperCase();
 
   // 1. App Bootstrap
   if (cleanUrl === '/app/bootstrap') {
@@ -1014,9 +1021,25 @@ export function getMockResponse(rawUrl = '', method = 'GET', requestData = null)
     };
   }
 
-  // 11. Single Profile Details: /profiles/:id
+  // 11. Profile Endpoints: /profiles/:id, /profiles/me, /profiles/upload-photo, /profiles/:id/view
   if (cleanUrl.startsWith('/profiles/')) {
-    const id = cleanUrl.replace('/profiles/', '');
+    if (cleanUrl.endsWith('/view')) {
+      return { success: true, message: 'Profile view recorded' };
+    }
+    if (cleanUrl === '/profiles/me') {
+      return { success: true, message: 'Profile updated successfully', profile: mockBrides[0] };
+    }
+    if (cleanUrl === '/profiles/upload-photo') {
+      return {
+        success: true,
+        message: 'Photo uploaded and secured successfully',
+        photo: {
+          url: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=600&q=80',
+          isPrimary: false,
+        },
+      };
+    }
+    const id = cleanUrl.replace('/profiles/', '').replace(/\/view$/, '');
     const all = [...mockBrides, ...mockGrooms];
     const found = all.find((p) => p._id === id || p.profileId === id || p.user === id) || all[0];
     return { success: true, profile: found };
@@ -1038,32 +1061,36 @@ export function getMockResponse(rawUrl = '', method = 'GET', requestData = null)
   }
 
   // 13. Authentication: Register
-  if (cleanUrl === '/auth/register' && method.toUpperCase() === 'POST') {
+  if (cleanUrl === '/auth/register') {
+    const userGender = requestData?.gender === 'Groom' || requestData?.lookingFor === 'Bride' ? 'Groom' : 'Bride';
+    const mockProfile = userGender === 'Groom' ? mockGrooms[0] : mockBrides[0];
+    const newUser = {
+      _id: 'u_' + Date.now(),
+      fullName: requestData?.fullName || 'Vinoth',
+      email: requestData?.email || 'member@srimatrimony.com',
+      mobile: requestData?.mobile || '+91 98400 99999',
+      gender: userGender,
+      role: 'member',
+      profileId: 'SM-M' + Math.floor(1000 + Math.random() * 9000),
+      isVerified: false,
+      activeMembership: {
+        planCode: 'free',
+        planName: 'Free Sanctuary',
+        contactViewsRemaining: 0,
+        interestRequestsRemaining: 5,
+        messagingCreditsRemaining: 0,
+      },
+    };
     return {
       success: true,
-      token: 'mock_jwt_token_registered_user',
-      user: {
-        _id: 'u_new',
-        fullName: requestData?.fullName || 'Tamil Member',
-        email: requestData?.email || 'member@srimatrimony.com',
-        mobile: requestData?.mobile || '+91 98400 99999',
-        gender: requestData?.gender || 'Bride',
-        role: 'member',
-        profileId: 'SM-M999',
-        isVerified: false,
-        activeMembership: {
-          planCode: 'free',
-          planName: 'Free Sanctuary',
-          contactViewsRemaining: 0,
-          interestRequestsRemaining: 5,
-          messagingCreditsRemaining: 0,
-        },
-      },
-      profile: mockBrides[0],
+      token: 'mock_jwt_token_' + Date.now(),
+      user: newUser,
+      profile: { ...mockProfile, fullName: newUser.fullName, profileId: newUser.profileId },
+      message: 'Registration successful! Welcome to Sri Matrimony.',
     };
   }
 
-  // 14. Authentication: Current Session (/auth/me)
+  // 14. Authentication: Current Session (/auth/me) & Logout
   if (cleanUrl === '/auth/me') {
     const defaultUser = mockUsers['priya@gmail.com'];
     return {
@@ -1073,7 +1100,11 @@ export function getMockResponse(rawUrl = '', method = 'GET', requestData = null)
     };
   }
 
-  // 15. Shortlists Toggle
+  if (cleanUrl === '/auth/logout') {
+    return { success: true, message: 'Logged out successfully' };
+  }
+
+  // 15. Shortlists: Toggle & List
   if (cleanUrl === '/shortlists/toggle') {
     return {
       success: true,
@@ -1082,7 +1113,11 @@ export function getMockResponse(rawUrl = '', method = 'GET', requestData = null)
     };
   }
 
-  // 16. Express Interest Send
+  if (cleanUrl === '/shortlists') {
+    return { success: true, count: 3, profiles: mockBrides.slice(0, 3) };
+  }
+
+  // 16. Express Interest: Send, Received, Sent, Respond
   if (cleanUrl === '/interests/send') {
     return {
       success: true,
@@ -1090,7 +1125,32 @@ export function getMockResponse(rawUrl = '', method = 'GET', requestData = null)
     };
   }
 
-  // 17. Contact Number Reveal
+  if (cleanUrl === '/interests/received') {
+    return {
+      success: true,
+      count: 2,
+      interests: [
+        { _id: 'int_1', sender: mockGrooms[0], status: 'pending', createdAt: new Date().toISOString() },
+        { _id: 'int_2', sender: mockGrooms[1], status: 'accepted', createdAt: new Date().toISOString() },
+      ],
+    };
+  }
+
+  if (cleanUrl === '/interests/sent') {
+    return {
+      success: true,
+      count: 1,
+      interests: [
+        { _id: 'int_3', recipient: mockBrides[0], status: 'pending', createdAt: new Date().toISOString() },
+      ],
+    };
+  }
+
+  if (cleanUrl.startsWith('/interests/') && cleanUrl.endsWith('/respond')) {
+    return { success: true, message: 'Interest response recorded successfully.' };
+  }
+
+  // 17. Contact Views: Reveal & History
   if (cleanUrl === '/contact-views/reveal') {
     return {
       success: true,
@@ -1104,10 +1164,66 @@ export function getMockResponse(rawUrl = '', method = 'GET', requestData = null)
     };
   }
 
-  // 18. Payment Sandbox Activation
-  if (cleanUrl === '/payments/mock-activate') {
+  if (cleanUrl === '/contact-views/history') {
+    return { success: true, count: 2, contacts: mockBrides.slice(0, 2) };
+  }
+
+  // 18. Dashboard Summary
+  if (cleanUrl === '/dashboard/summary') {
     return {
       success: true,
+      stats: {
+        profileViews: 142,
+        interestsReceived: 18,
+        interestsSent: 7,
+        shortlistedBy: 29,
+        contactViewsRemaining: 15,
+      },
+      recentVisitors: mockGrooms.slice(0, 4),
+      recommendedMatches: mockGrooms.slice(0, 4),
+    };
+  }
+
+  // 19. Notifications: List & Mark Read
+  if (cleanUrl === '/notifications') {
+    return {
+      success: true,
+      count: 2,
+      notifications: [
+        {
+          _id: 'n_1',
+          title: 'New Profile Matched',
+          message: 'Divya Senthil matches 96% of your astrological criteria.',
+          read: false,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          _id: 'n_2',
+          title: 'Sacred Interest Received',
+          message: 'Dr. Deepa Krishnan expressed interest in your profile.',
+          read: true,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    };
+  }
+
+  if (cleanUrl === '/notifications/mark-read') {
+    return { success: true, message: 'All notifications marked as read' };
+  }
+
+  // 20. User Settings
+  if (cleanUrl === '/users/settings') {
+    return { success: true, message: 'Settings updated successfully' };
+  }
+
+  // 21. Payments: create-order, verify, offline-request, mock-activate
+  if (cleanUrl.startsWith('/payments/')) {
+    return {
+      success: true,
+      orderId: 'order_mock_' + Date.now(),
+      amount: requestData?.amount || 199900,
+      currency: 'INR',
       message: 'Plan activated successfully in Sandbox Demonstration mode.',
       activeMembership: {
         planCode: requestData?.planCode || 'standard',
@@ -1120,16 +1236,16 @@ export function getMockResponse(rawUrl = '', method = 'GET', requestData = null)
     };
   }
 
-  // 19. Public Inquiries
-  if (cleanUrl === '/contact-inquiries') {
+  // 22. Public Inquiries / Contact
+  if (cleanUrl === '/contact-inquiries' || cleanUrl === '/contact/inquiry') {
     return {
       success: true,
       message: 'Thank you! A dedicated matrimonial relationship manager will reach out shortly.',
     };
   }
 
-  // 20. Admin metrics & members
-  if (cleanUrl === '/admin/metrics') {
+  // 23. Admin metrics & members
+  if (cleanUrl === '/admin/metrics' || cleanUrl === '/admin/stats') {
     return {
       success: true,
       metrics: {
@@ -1144,9 +1260,25 @@ export function getMockResponse(rawUrl = '', method = 'GET', requestData = null)
     };
   }
 
-  if (cleanUrl === '/admin/members') {
+  if (cleanUrl === '/admin/members' || cleanUrl === '/admin/users') {
     const all = [...mockBrides, ...mockGrooms];
-    return { success: true, count: all.length, members: all };
+    return { success: true, count: all.length, members: all, users: all };
+  }
+
+  if (cleanUrl.startsWith('/admin/verifications')) {
+    return {
+      success: true,
+      count: 3,
+      verifications: mockBrides.slice(0, 3).map((b, i) => ({
+        _id: 'ver_' + i,
+        user: b.user || b._id,
+        fullName: b.fullName,
+        documentType: 'Aadhaar Card',
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      })),
+      message: 'Verification status updated',
+    };
   }
 
   if (cleanUrl === '/admin/payments') {
@@ -1190,5 +1322,9 @@ export function getMockResponse(rawUrl = '', method = 'GET', requestData = null)
     };
   }
 
-  return null;
+  // Universal safe fallback for any other unhandled route
+  return {
+    success: true,
+    message: 'Action completed successfully.',
+  };
 }

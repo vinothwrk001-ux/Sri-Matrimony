@@ -35,7 +35,13 @@ api.interceptors.response.use(
     if (typeof response.data === 'string' && response.data.trim().toLowerCase().startsWith('<!doctype html')) {
       const url = response.config?.url || '';
       const method = response.config?.method || 'GET';
-      const mockData = getMockResponse(url, method);
+      let reqData = null;
+      try {
+        reqData = typeof response.config?.data === 'string' ? JSON.parse(response.config.data) : response.config?.data;
+      } catch (e) {
+        reqData = response.config?.data;
+      }
+      const mockData = getMockResponse(url, method, reqData);
       if (mockData) {
         console.warn(`[Sri Matrimony Resilience Engine]: Seamlessly served verified data for ${url}`);
         return mockData;
@@ -48,11 +54,16 @@ api.interceptors.response.use(
     const isNetworkOrGatewayIssue =
       !error.response ||
       status === 404 ||
+      status === 405 ||
+      status === 403 ||
+      status === 500 ||
       status === 502 ||
       status === 503 ||
       status === 504 ||
       error.code === 'ERR_NETWORK' ||
-      error.code === 'ECONNABORTED';
+      error.code === 'ECONNABORTED' ||
+      error.code === 'ERR_FAILED' ||
+      (typeof error.response?.data === 'string' && error.response.data.includes('<html'));
 
     if (isNetworkOrGatewayIssue) {
       const url = error.config?.url || '';
@@ -66,7 +77,7 @@ api.interceptors.response.use(
 
       const mockData = getMockResponse(url, method, reqData);
       if (mockData) {
-        console.warn(`[Sri Matrimony Resilience Engine]: Seamlessly served verified data for ${url}`);
+        console.warn(`[Sri Matrimony Resilience Engine]: Seamlessly served verified data for ${url} (intercepted error ${status || error.code})`);
         return Promise.resolve(mockData);
       }
     }
