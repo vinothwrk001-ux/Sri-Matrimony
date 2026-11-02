@@ -55,6 +55,12 @@ export default function ProfileCard({ profile, variant = 'standard' }) {
           src={primaryPhoto}
           alt={profile.fullName}
           loading="lazy"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = profile?.gender === 'Bride'
+              ? 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=600&q=80'
+              : 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80';
+          }}
           className="w-full h-full object-cover object-top group-hover:scale-106 transition-transform duration-500 ease-out"
         />
 

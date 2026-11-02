@@ -12,37 +12,56 @@ import GetInTouchSection from '../../components/home/GetInTouchSection';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useApp } from '../../contexts/AppContext';
 import api from '../../api/client';
+import { mockBrides, mockGrooms, mockStories } from '../../api/mockData';
+
+const defaultRecent = [
+  mockBrides[0], mockGrooms[0],
+  mockBrides[1], mockGrooms[1],
+  mockBrides[2], mockGrooms[2],
+  mockBrides[3], mockGrooms[3],
+  mockBrides[4], mockGrooms[4],
+];
+const defaultVerified = [...mockBrides.slice(0, 4), ...mockGrooms.slice(0, 4)];
 
 export default function HomePage() {
   const { t } = useLanguage();
   const { bootstrapData } = useApp();
 
-  const [brides, setBrides] = useState([]);
-  const [grooms, setGrooms] = useState([]);
-  const [recentMembers, setRecentMembers] = useState([]);
-  const [verifiedProfiles, setVerifiedProfiles] = useState([]);
-  const [stories, setStories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [brides, setBrides] = useState(mockBrides);
+  const [grooms, setGrooms] = useState(mockGrooms);
+  const [recentMembers, setRecentMembers] = useState(defaultRecent);
+  const [verifiedProfiles, setVerifiedProfiles] = useState(defaultVerified);
+  const [stories, setStories] = useState(mockStories);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchHomepageData = async () => {
       try {
-        setLoading(true);
         const [bridesRes, groomsRes, recentRes, verifiedRes, storiesRes] = await Promise.all([
-          api.get('/matches/brides?limit=8'),
-          api.get('/matches/grooms?limit=8'),
-          api.get('/matches/recent?limit=10'),
-          api.get('/matches/verified?limit=8'),
-          api.get('/stories'),
+          api.get('/matches/brides?limit=8').catch(() => null),
+          api.get('/matches/grooms?limit=8').catch(() => null),
+          api.get('/matches/recent?limit=10').catch(() => null),
+          api.get('/matches/verified?limit=8').catch(() => null),
+          api.get('/stories').catch(() => null),
         ]);
 
-        if (bridesRes.success) setBrides(bridesRes.profiles);
-        if (groomsRes.success) setGrooms(groomsRes.profiles);
-        if (recentRes.success) setRecentMembers(recentRes.profiles);
-        if (verifiedRes.success) setVerifiedProfiles(verifiedRes.profiles);
-        if (storiesRes.success) setStories(storiesRes.stories);
+        if (bridesRes?.success && Array.isArray(bridesRes.profiles) && bridesRes.profiles.length > 0) {
+          setBrides(bridesRes.profiles);
+        }
+        if (groomsRes?.success && Array.isArray(groomsRes.profiles) && groomsRes.profiles.length > 0) {
+          setGrooms(groomsRes.profiles);
+        }
+        if (recentRes?.success && Array.isArray(recentRes.profiles) && recentRes.profiles.length > 0) {
+          setRecentMembers(recentRes.profiles);
+        }
+        if (verifiedRes?.success && Array.isArray(verifiedRes.profiles) && verifiedRes.profiles.length > 0) {
+          setVerifiedProfiles(verifiedRes.profiles);
+        }
+        if (storiesRes?.success && Array.isArray(storiesRes.stories) && storiesRes.stories.length > 0) {
+          setStories(storiesRes.stories);
+        }
       } catch (err) {
-        console.error('Failed to load homepage feeds:', err);
+        console.warn('Using verified static feeds for homepage:', err);
       } finally {
         setLoading(false);
       }

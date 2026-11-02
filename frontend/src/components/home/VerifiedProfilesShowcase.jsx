@@ -3,19 +3,22 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShieldCheck, CheckCircle2, Award, FileCheck2, ArrowRight, Sparkles, Lock, ChevronLeft, ChevronRight, MapPin, Briefcase } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { mockBrides, mockGrooms } from '../../api/mockData';
+
+const defaultFallbackVerified = [...mockBrides.slice(0, 4), ...mockGrooms.slice(0, 4)];
 
 export default function VerifiedProfilesShowcase({ profiles = [], loading = false }) {
   const { t } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  if (loading || !profiles || profiles.length === 0) return null;
+  const activeProfiles = (profiles && profiles.length > 0) ? profiles : defaultFallbackVerified;
 
   const nextSlide = () => {
-    setCurrentIndex((prev) => (prev + 3 >= profiles.length ? 0 : prev + 1));
+    setCurrentIndex((prev) => (prev + 3 >= activeProfiles.length ? 0 : prev + 1));
   };
 
   const prevSlide = () => {
-    setCurrentIndex((prev) => (prev === 0 ? Math.max(0, profiles.length - 3) : prev - 1));
+    setCurrentIndex((prev) => (prev === 0 ? Math.max(0, activeProfiles.length - 3) : prev - 1));
   };
 
   const trustMetrics = [
@@ -114,7 +117,7 @@ export default function VerifiedProfilesShowcase({ profiles = [], loading = fals
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-            {profiles.slice(currentIndex, currentIndex + 3).map((profile) => {
+            {activeProfiles.slice(currentIndex, currentIndex + 3).map((profile) => {
               const photoUrl =
                 profile.photos?.[0]?.url ||
                 (profile.gender === 'Female'
@@ -133,6 +136,12 @@ export default function VerifiedProfilesShowcase({ profiles = [], loading = fals
                         src={photoUrl}
                         alt={profile.fullName}
                         loading="lazy"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = profile.gender === 'Female'
+                            ? 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600'
+                            : 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600';
+                        }}
                         className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                       />
 

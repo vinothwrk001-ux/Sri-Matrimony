@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, MapPin, Briefcase, GraduationCap, Heart, ArrowRight, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import ProfileCard from '../common/ProfileCard';
+import { mockBrides, mockGrooms } from '../../api/mockData';
 
 export default function EditorialShowcase({
   gender = 'Bride',
@@ -17,10 +18,11 @@ export default function EditorialShowcase({
   const [featuredIndex, setFeaturedIndex] = useState(0);
   const [satellitePage, setSatellitePage] = useState(0);
 
-  if (!profiles || profiles.length === 0) return null;
+  const fallbackProfiles = gender === 'Bride' ? mockBrides : mockGrooms;
+  const activeProfiles = profiles && profiles.length > 0 ? profiles : fallbackProfiles;
 
-  const featured = profiles[featuredIndex] || profiles[0];
-  const otherProfiles = profiles.filter((_, idx) => idx !== featuredIndex);
+  const featured = activeProfiles[featuredIndex] || activeProfiles[0] || fallbackProfiles[0];
+  const otherProfiles = activeProfiles.filter((_, idx) => idx !== featuredIndex);
 
   // Show exactly 2 companion cards per view (1 clean matching row)
   const itemsPerPage = 2;

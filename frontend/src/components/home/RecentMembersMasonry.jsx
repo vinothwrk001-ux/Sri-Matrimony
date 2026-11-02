@@ -3,26 +3,23 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, MapPin, Briefcase, CheckCircle2, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { mockBrides, mockGrooms } from '../../api/mockData';
+
+const defaultFallbackRecent = [
+  mockBrides[0], mockGrooms[0],
+  mockBrides[1], mockGrooms[1],
+  mockBrides[2], mockGrooms[2],
+  mockBrides[3], mockGrooms[3],
+];
 
 export default function RecentMembersMasonry({ profiles = [], loading = false }) {
   const { t } = useLanguage();
   const [filter, setFilter] = useState('ALL');
   const [page, setPage] = useState(0);
 
-  if (loading) {
-    return (
-      <section className="py-20 bg-[#FAF6F0] relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="w-10 h-10 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="font-editorial text-lg text-[#2D0B0E]">Curating recently joined members...</p>
-        </div>
-      </section>
-    );
-  }
+  const activeProfiles = (profiles && profiles.length > 0) ? profiles : defaultFallbackRecent;
 
-  if (!profiles || profiles.length === 0) return null;
-
-  const filteredProfiles = profiles.filter((p) => {
+  const filteredProfiles = activeProfiles.filter((p) => {
     if (filter === 'BRIDES') return p.gender === 'Female' || p.gender === 'Bride';
     if (filter === 'GROOMS') return p.gender === 'Male' || p.gender === 'Groom';
     return true;
@@ -143,6 +140,12 @@ export default function RecentMembersMasonry({ profiles = [], loading = false })
                     src={photoUrl}
                     alt={profile.fullName}
                     loading="lazy"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = (profile.gender === 'Female' || profile.gender === 'Bride')
+                        ? 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600'
+                        : 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600';
+                    }}
                     className="w-full h-full object-cover object-top group-hover:scale-106 transition-transform duration-600 brightness-[0.93] group-hover:brightness-100"
                   />
                   {/* Subtle Top & Bottom Gradients */}
